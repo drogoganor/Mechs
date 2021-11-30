@@ -8,7 +8,7 @@ namespace Mechs.Game
         {
             var window = new VeldridStartupWindow("Mechs");
             var mainMenu = new MainMenu(window);
-            var game = new TexturedCube(window);
+            var game = new Game(window);
 
             mainMenu.Show();
             mainMenu.OnNewGame += () =>

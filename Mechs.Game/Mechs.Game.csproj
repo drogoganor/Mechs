@@ -9,6 +9,24 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Content\textures.json" />
+    <None Remove="Content\textures\bricks1.png" />
+    <None Remove="Content\textures\grass.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Content\textures.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Content\textures\bricks1.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Content\textures\grass.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="BepuPhysics" Version="2.3.0" />
     <PackageReference Include="SharpText.Veldrid" Version="0.2.0" />
     <PackageReference Include="Veldrid" Version="4.8.0" />

@@ -1,0 +1,12 @@
+{
+	"Textures": [
+		{
+			"ID": 0,
+			"TextureName": "textures\\grass.png"
+		},
+		{
+			"ID": 1,
+			"TextureName": "textures\\bricks1.png"
+		},
+	],
+}

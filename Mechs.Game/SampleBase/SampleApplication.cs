@@ -40,7 +40,7 @@ namespace SampleBase
             Window.KeyPressed -= OnKeyDown;
         }
 
-        public void OnGraphicsDeviceCreated(GraphicsDevice gd, ResourceFactory factory, Swapchain sc)
+        public virtual void OnGraphicsDeviceCreated(GraphicsDevice gd, ResourceFactory factory, Swapchain sc)
         {
             GraphicsDevice = gd;
             ResourceFactory = factory;

@@ -1,5 +1,4 @@
-﻿using AssetPrimitives;
-using SampleBase;
+﻿using SampleBase;
 using System.Numerics;
 using System.Text;
 using Veldrid;
@@ -8,9 +7,11 @@ using Veldrid.SPIRV;
 
 namespace Mechs.Game
 {
-    public class TexturedCube : SampleApplication
+    public class Game : SampleApplication
     {
         public Action OnEndGame;
+
+        private GameResources gameResources;
 
         private readonly ImageSharpTexture _imageSharpTexture;
 
@@ -22,19 +23,16 @@ namespace Mechs.Game
         private DeviceBuffer _vertexBuffer;
         private DeviceBuffer _indexBuffer;
         private CommandList _cl;
-        private Texture _surfaceTexture;
-        private TextureView _surfaceTextureView;
         private Pipeline _pipeline;
         private ResourceSet _projViewSet;
         private ResourceSet _worldTextureSet;
+        private TextureView _surfaceTextureView;
         private float _ticks;
 
         private InGameMenu inGameMenu;
 
-        public TexturedCube(IApplicationWindow window) : base(window)
+        public Game(IApplicationWindow window) : base(window)
         {
-            _imageSharpTexture = new ImageSharpTexture("C:\\temp\\fart2.png", true);
-
             _vertices = GetCubeVertices();
             _indices = GetCubeIndices();
 
@@ -62,6 +60,8 @@ namespace Mechs.Game
 
         protected unsafe override void CreateResources(ResourceFactory factory)
         {
+            gameResources = new GameResources(GraphicsDevice, ResourceFactory);
+
             _projectionBuffer = factory.CreateBuffer(new BufferDescription(64, BufferUsage.UniformBuffer));
             _viewBuffer = factory.CreateBuffer(new BufferDescription(64, BufferUsage.UniformBuffer));
             _worldBuffer = factory.CreateBuffer(new BufferDescription(64, BufferUsage.UniformBuffer));
@@ -72,8 +72,7 @@ namespace Mechs.Game
             _indexBuffer = factory.CreateBuffer(new BufferDescription(sizeof(ushort) * (uint)_indices.Length, BufferUsage.IndexBuffer));
             GraphicsDevice.UpdateBuffer(_indexBuffer, 0, _indices);
 
-            _surfaceTexture = _imageSharpTexture.CreateDeviceTexture(GraphicsDevice, ResourceFactory);
-            _surfaceTextureView = factory.CreateTextureView(_surfaceTexture);
+            _surfaceTextureView = gameResources.Textures[1].TextureView;
 
             ShaderSetDescription shaderSet = new ShaderSetDescription(
                 new[]
@@ -131,7 +130,6 @@ namespace Mechs.Game
         protected override void Draw(float deltaSeconds)
         {
             // TODO: Place in Update/PreDraw
-
             if (InputTracker.GetKey(Key.Escape))
             {
                 ShowInGameMenu();
