@@ -153,7 +153,7 @@ namespace Mechs.Game
             _cl.UpdateBuffer(_worldBuffer, 0, this._camera.ViewMatrix);
 
             _cl.SetFramebuffer(MainSwapchain.Framebuffer);
-            _cl.ClearColorTarget(0, RgbaFloat.DarkRed);
+            _cl.ClearColorTarget(0, RgbaFloat.Black);
             _cl.ClearDepthStencil(1f);
             _cl.SetPipeline(_pipeline);
             _cl.SetVertexBuffer(0, _vertexBuffer);

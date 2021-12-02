@@ -2,11 +2,11 @@
   "Textures": [
     {
       "ID": 0,
-      "Filename": "textures\\bricks1.png"
+      "Filename": "textures\\grass.png"
     },
     {
       "ID": 1,
-      "Filename": "textures\\grass.png"
+      "Filename": "textures\\bricks1.png"
     }
   ]
 }
