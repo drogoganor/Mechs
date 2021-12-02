@@ -73,7 +73,7 @@ namespace AssetPrimitives
             return texture;
         }
 
-        private uint GetFormatSize(PixelFormat format)
+        public uint GetFormatSize(PixelFormat format)
         {
             switch (format)
             {

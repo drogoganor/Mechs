@@ -72,7 +72,7 @@ namespace Mechs.Game
             _indexBuffer = factory.CreateBuffer(new BufferDescription(sizeof(ushort) * (uint)_indices.Length, BufferUsage.IndexBuffer));
             GraphicsDevice.UpdateBuffer(_indexBuffer, 0, _indices);
 
-            _surfaceTextureView = gameResources.Textures[1].TextureView;
+            _surfaceTextureView = gameResources.TextureView;
 
             ShaderSetDescription shaderSet = new ShaderSetDescription(
                 new[]
@@ -153,7 +153,7 @@ namespace Mechs.Game
             _cl.UpdateBuffer(_worldBuffer, 0, this._camera.ViewMatrix);
 
             _cl.SetFramebuffer(MainSwapchain.Framebuffer);
-            _cl.ClearColorTarget(0, RgbaFloat.Black);
+            _cl.ClearColorTarget(0, RgbaFloat.DarkRed);
             _cl.ClearDepthStencil(1f);
             _cl.SetPipeline(_pipeline);
             _cl.SetVertexBuffer(0, _vertexBuffer);
@@ -259,12 +259,12 @@ void main()
 layout(location = 0) in vec2 fsin_texCoords;
 layout(location = 0) out vec4 fsout_color;
 
-layout(set = 1, binding = 1) uniform texture2D SurfaceTexture;
+layout(set = 1, binding = 1) uniform texture2DArray SurfaceTexture;
 layout(set = 1, binding = 2) uniform sampler SurfaceSampler;
 
 void main()
 {
-    fsout_color =  texture(sampler2D(SurfaceTexture, SurfaceSampler), fsin_texCoords);
+    fsout_color =  texture(sampler2DArray(SurfaceTexture, SurfaceSampler), vec3(fsin_texCoords, 1));
 }";
     }
 
