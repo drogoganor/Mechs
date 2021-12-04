@@ -64,7 +64,7 @@ namespace SampleBase
 
         private void PreDraw(float deltaSeconds)
         {
-            _camera.Update(deltaSeconds);
+            //_camera.Update(deltaSeconds);
         }
 
         protected abstract void Draw(float deltaSeconds);

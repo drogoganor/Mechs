@@ -16,12 +16,12 @@ namespace Mechs.Game
         private readonly ImageSharpTexture _imageSharpTexture;
 
         private readonly VertexPositionTexture[] _vertices;
-        private readonly ushort[] _indices;
+        //private readonly ushort[] _indices;
         private DeviceBuffer _projectionBuffer;
         private DeviceBuffer _viewBuffer;
         private DeviceBuffer _worldBuffer;
         private DeviceBuffer _vertexBuffer;
-        private DeviceBuffer _indexBuffer;
+        //private DeviceBuffer _indexBuffer;
         private CommandList _cl;
         private Pipeline _pipeline;
         private ResourceSet _projViewSet;
@@ -30,11 +30,13 @@ namespace Mechs.Game
         private float _ticks;
 
         private InGameMenu inGameMenu;
+        private GameMapReader gameMapReader;
 
         public Game(IApplicationWindow window) : base(window)
         {
-            _vertices = GetCubeVertices();
-            _indices = GetCubeIndices();
+            gameMapReader = new GameMapReader("mapdemo.json");
+
+            _vertices = gameMapReader.GetVertexArray();
 
             inGameMenu = new InGameMenu(window);
             inGameMenu.OnReturnToGame += InGameMenu_OnReturnToGame;
@@ -69,8 +71,8 @@ namespace Mechs.Game
             _vertexBuffer = factory.CreateBuffer(new BufferDescription((uint)(VertexPositionTexture.SizeInBytes * _vertices.Length), BufferUsage.VertexBuffer));
             GraphicsDevice.UpdateBuffer(_vertexBuffer, 0, _vertices);
 
-            _indexBuffer = factory.CreateBuffer(new BufferDescription(sizeof(ushort) * (uint)_indices.Length, BufferUsage.IndexBuffer));
-            GraphicsDevice.UpdateBuffer(_indexBuffer, 0, _indices);
+            //_indexBuffer = factory.CreateBuffer(new BufferDescription(sizeof(ushort) * (uint)_indices.Length, BufferUsage.IndexBuffer));
+            //GraphicsDevice.UpdateBuffer(_indexBuffer, 0, _indices);
 
             _surfaceTextureView = gameResources.TextureView;
 
@@ -79,7 +81,7 @@ namespace Mechs.Game
                 {
                     new VertexLayoutDescription(
                         new VertexElementDescription("Position", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float3),
-                        new VertexElementDescription("TexCoords", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2))
+                        new VertexElementDescription("TexCoords", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float3))
                 },
                 factory.CreateFromSpirv(
                     new ShaderDescription(ShaderStages.Vertex, Encoding.UTF8.GetBytes(VertexCode), "main"),
@@ -139,17 +141,24 @@ namespace Mechs.Game
             _ticks += deltaSeconds * 1000f;
             _cl.Begin();
 
-            _cl.UpdateBuffer(_projectionBuffer, 0, Matrix4x4.CreatePerspectiveFieldOfView(
-                1.0f,
-                (float)Window.Width / Window.Height,
+            var zoomFactor = 16f;
+            _cl.UpdateBuffer(_projectionBuffer, 0, Matrix4x4.CreateOrthographic(
+                zoomFactor,
+                (float)(Window.Width / Window.Height) * zoomFactor,
                 0.5f,
                 100f));
 
-            _cl.UpdateBuffer(_viewBuffer, 0, Matrix4x4.CreateLookAt(Vector3.UnitZ * 2.5f, Vector3.Zero, Vector3.UnitY));
+            var cameraPos = new Vector3(0, 0, 10f);
 
-            //Matrix4x4 rotation =
-            //    Matrix4x4.CreateFromAxisAngle(Vector3.UnitY, (_ticks / 1000f))
-            //    * Matrix4x4.CreateFromAxisAngle(Vector3.UnitX, (_ticks / 3000f));
+            var view = Matrix4x4.CreateLookAt(Vector3.Transform(cameraPos, Matrix4x4.CreateFromYawPitchRoll(0.785398f, -0.610865f, 0)), // 45 and 35 degrees
+                Vector3.Zero, Vector3.UnitY);
+            //return Matrix.CreateLookAt(Vector3.Transform(position, Matrix.CreateFromYawPitchRoll(MathHelper.ToRadians(45), MathHelper.ToRadians(35), 0)),
+            //        Vector3.Transform(lookAtVector, Matrix.CreateFromYawPitchRoll(MathHelper.ToRadians(45), MathHelper.ToRadians(35), 0)),
+            //        upVector);
+
+            _cl.UpdateBuffer(_viewBuffer, 0, view);
+            //_cl.UpdateBuffer(_viewBuffer, 0, Matrix4x4.CreateRotationX(0.785398f) * Matrix4x4.CreateRotationY(0.523599f));
+
             _cl.UpdateBuffer(_worldBuffer, 0, this._camera.ViewMatrix);
 
             _cl.SetFramebuffer(MainSwapchain.Framebuffer);
@@ -157,69 +166,16 @@ namespace Mechs.Game
             _cl.ClearDepthStencil(1f);
             _cl.SetPipeline(_pipeline);
             _cl.SetVertexBuffer(0, _vertexBuffer);
-            _cl.SetIndexBuffer(_indexBuffer, IndexFormat.UInt16);
+            //_cl.SetIndexBuffer(_indexBuffer, IndexFormat.UInt16);
             _cl.SetGraphicsResourceSet(0, _projViewSet);
             _cl.SetGraphicsResourceSet(1, _worldTextureSet);
-            _cl.DrawIndexed(36, 1, 0, 0, 0);
+            _cl.Draw((uint)_vertices.Length);
+            //_cl.DrawIndexed(36, 1, 0, 0, 0);
 
             _cl.End();
             GraphicsDevice.SubmitCommands(_cl);
             GraphicsDevice.SwapBuffers(MainSwapchain);
             GraphicsDevice.WaitForIdle();
-        }
-
-        private static VertexPositionTexture[] GetCubeVertices()
-        {
-            VertexPositionTexture[] vertices = new VertexPositionTexture[]
-            {
-                // Top
-                new VertexPositionTexture(new Vector3(-0.5f, +0.5f, -0.5f), new Vector2(0, 0)),
-                new VertexPositionTexture(new Vector3(+0.5f, +0.5f, -0.5f), new Vector2(1, 0)),
-                new VertexPositionTexture(new Vector3(+0.5f, +0.5f, +0.5f), new Vector2(1, 1)),
-                new VertexPositionTexture(new Vector3(-0.5f, +0.5f, +0.5f), new Vector2(0, 1)),
-                // Bottom                                                             
-                new VertexPositionTexture(new Vector3(-0.5f,-0.5f, +0.5f),  new Vector2(0, 0)),
-                new VertexPositionTexture(new Vector3(+0.5f,-0.5f, +0.5f),  new Vector2(1, 0)),
-                new VertexPositionTexture(new Vector3(+0.5f,-0.5f, -0.5f),  new Vector2(1, 1)),
-                new VertexPositionTexture(new Vector3(-0.5f,-0.5f, -0.5f),  new Vector2(0, 1)),
-                // Left                                                               
-                new VertexPositionTexture(new Vector3(-0.5f, +0.5f, -0.5f), new Vector2(0, 0)),
-                new VertexPositionTexture(new Vector3(-0.5f, +0.5f, +0.5f), new Vector2(1, 0)),
-                new VertexPositionTexture(new Vector3(-0.5f, -0.5f, +0.5f), new Vector2(1, 1)),
-                new VertexPositionTexture(new Vector3(-0.5f, -0.5f, -0.5f), new Vector2(0, 1)),
-                // Right                                                              
-                new VertexPositionTexture(new Vector3(+0.5f, +0.5f, +0.5f), new Vector2(0, 0)),
-                new VertexPositionTexture(new Vector3(+0.5f, +0.5f, -0.5f), new Vector2(1, 0)),
-                new VertexPositionTexture(new Vector3(+0.5f, -0.5f, -0.5f), new Vector2(1, 1)),
-                new VertexPositionTexture(new Vector3(+0.5f, -0.5f, +0.5f), new Vector2(0, 1)),
-                // Back                                                               
-                new VertexPositionTexture(new Vector3(+0.5f, +0.5f, -0.5f), new Vector2(0, 0)),
-                new VertexPositionTexture(new Vector3(-0.5f, +0.5f, -0.5f), new Vector2(1, 0)),
-                new VertexPositionTexture(new Vector3(-0.5f, -0.5f, -0.5f), new Vector2(1, 1)),
-                new VertexPositionTexture(new Vector3(+0.5f, -0.5f, -0.5f), new Vector2(0, 1)),
-                // Front                                                              
-                new VertexPositionTexture(new Vector3(-0.5f, +0.5f, +0.5f), new Vector2(0, 0)),
-                new VertexPositionTexture(new Vector3(+0.5f, +0.5f, +0.5f), new Vector2(1, 0)),
-                new VertexPositionTexture(new Vector3(+0.5f, -0.5f, +0.5f), new Vector2(1, 1)),
-                new VertexPositionTexture(new Vector3(-0.5f, -0.5f, +0.5f), new Vector2(0, 1)),
-            };
-
-            return vertices;
-        }
-
-        private static ushort[] GetCubeIndices()
-        {
-            ushort[] indices =
-            {
-                0,1,2, 0,2,3,
-                4,5,6, 4,6,7,
-                8,9,10, 8,10,11,
-                12,13,14, 12,14,15,
-                16,17,18, 16,18,19,
-                20,21,22, 20,22,23,
-            };
-
-            return indices;
         }
 
         private const string VertexCode = @"
@@ -241,8 +197,8 @@ layout(set = 1, binding = 0) uniform WorldBuffer
 };
 
 layout(location = 0) in vec3 Position;
-layout(location = 1) in vec2 TexCoords;
-layout(location = 0) out vec2 fsin_texCoords;
+layout(location = 1) in vec3 TexCoords;
+layout(location = 0) out vec3 fsin_texCoords;
 
 void main()
 {
@@ -256,7 +212,7 @@ void main()
         private const string FragmentCode = @"
 #version 450
 
-layout(location = 0) in vec2 fsin_texCoords;
+layout(location = 0) in vec3 fsin_texCoords;
 layout(location = 0) out vec4 fsout_color;
 
 layout(set = 1, binding = 1) uniform texture2DArray SurfaceTexture;
@@ -264,28 +220,7 @@ layout(set = 1, binding = 2) uniform sampler SurfaceSampler;
 
 void main()
 {
-    fsout_color =  texture(sampler2DArray(SurfaceTexture, SurfaceSampler), vec3(fsin_texCoords, 1));
+    fsout_color =  texture(sampler2DArray(SurfaceTexture, SurfaceSampler), fsin_texCoords);
 }";
-    }
-
-    public struct VertexPositionTexture
-    {
-        public const uint SizeInBytes = 20;
-
-        public float PosX;
-        public float PosY;
-        public float PosZ;
-
-        public float TexU;
-        public float TexV;
-
-        public VertexPositionTexture(Vector3 pos, Vector2 uv)
-        {
-            PosX = pos.X;
-            PosY = pos.Y;
-            PosZ = pos.Z;
-            TexU = uv.X;
-            TexV = uv.Y;
-        }
     }
 }

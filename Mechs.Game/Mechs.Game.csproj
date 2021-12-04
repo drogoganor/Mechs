@@ -9,12 +9,16 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Content\mapdemo.json" />
     <None Remove="Content\textures.json" />
     <None Remove="Content\textures\bricks1.png" />
     <None Remove="Content\textures\grass.png" />
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="Content\mapdemo.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="Content\textures.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
