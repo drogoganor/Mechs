@@ -1,0 +1,30 @@
+﻿{
+  "Name": "Mars Needs Women",
+  "Size": [ 16, 16, 16 ],
+  "Blocks": [
+    {
+      "Position": [ 0, 0, 0 ],
+      "FaceTextures": [ 1, 0, 1, 0, 1, 0 ]
+    },
+    {
+      "Position": [ 1, 0, 0 ],
+      "FaceTextures": [ 2, 0, 0, 0, 2, 0 ]
+    },
+    {
+      "Position": [ 0, 0, 1 ],
+      "FaceTextures": [ 2, 0, 2, 0, 0, 0 ]
+    },
+    {
+      "Position": [ 1, 0, 1 ],
+      "FaceTextures": [ 1, 0, 0, 1, 0, 1 ]
+    },
+    {
+      "Position": [ 0, 1, 0 ],
+      "FaceTextures": [ 0, 0, 3, 3, 3, 3 ]
+    },
+    {
+      "Position": [ 0, 2, 0 ],
+      "FaceTextures": [ 1, 0, 3, 3, 3, 3 ]
+    }
+  ]
+}

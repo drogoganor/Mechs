@@ -1,0 +1,24 @@
+{
+  "Textures": [
+    {
+      "ID": 1,
+      "Filename": "textures\\placeholder-grey1.png"
+    },
+    {
+      "ID": 2,
+      "Filename": "textures\\placeholder-grey2.png"
+    },
+    {
+      "ID": 3,
+      "Filename": "textures\\placeholder-window1.png"
+    },
+    {
+      "ID": 4,
+      "Filename": "textures\\bricks1.png"
+    },
+    {
+      "ID": 5,
+      "Filename": "textures\\grass.png"
+    }
+  ]
+}

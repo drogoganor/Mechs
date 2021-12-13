@@ -1,28 +1,20 @@
-﻿using SampleBase;
+﻿using Mechs;
+using Mechs.SampleBase;
 
-namespace Mechs.Game
+var window = new VeldridStartupWindow("Mechs");
+var mainMenu = new MainMenu(window);
+var game = new Game(window);
+
+mainMenu.Show();
+mainMenu.OnNewGame += () =>
 {
-    class Program
+    mainMenu.Hide();
+    game.Show();
+    game.OnEndGame += () =>
     {
-        public static void Main(string[] args)
-        {
-            var window = new VeldridStartupWindow("Mechs");
-            var mainMenu = new MainMenu(window);
-            var game = new Game(window);
+        game.Hide();
+        mainMenu.Show();
+    };
+};
 
-            mainMenu.Show();
-            mainMenu.OnNewGame += () =>
-            {
-                mainMenu.Hide();
-                game.Show();
-                game.OnEndGame += () =>
-                {
-                    game.Hide();
-                    mainMenu.Show();
-                };
-            };
-
-            window.Run();
-        }
-    }
-}
+window.Run();
