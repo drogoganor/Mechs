@@ -32,7 +32,7 @@ namespace Mechs
 
         public Game(IApplicationWindow window) : base(window)
         {
-            gameMapReader = new GameMapReader("mapdemo2.json");
+            gameMapReader = new GameMapReader("mapcity.json");
 
             _vertices = gameMapReader.GetVertexArray();
 

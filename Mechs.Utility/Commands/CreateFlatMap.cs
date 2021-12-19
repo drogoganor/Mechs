@@ -4,20 +4,21 @@ using System.Text.Json;
 
 namespace Mechs.Utility.Commands
 {
-    internal class CreateMap : IUtilityCommand
+    internal class CreateFlatMap : IUtilityCommand
     {
-        public string CommandName => "CreateMap";
+        public string CommandName => "CreateFlatMap";
 
         public void Execute(string[] args)
         {
-            if (args.Length != 3)
+            if (args.Length < 3)
             {
-                throw new ArgumentException("CreateMap requires 3 arguments: [length] [width] [texture]");
+                throw new ArgumentException("CreateFlatMap requires 3 arguments: [length] [width] [texture]");
             }
 
             var length = Convert.ToInt32(args[0]);
             var width = Convert.ToInt32(args[1]);
             var texture = Convert.ToInt32(args[2]);
+            var altTexture = args.Length > 3 ? Convert.ToInt32(args[3]) : texture;
             var height = length; // TODO: Make an argument
             var fileName = "mapdemo2.json";
 
@@ -29,20 +30,26 @@ namespace Mechs.Utility.Commands
             {
                 for (var z = 0; z < width; z++)
                 {
+                    var thisTexture = texture;
+                    if ((z % 2 != 0 && x % 2 == 0) || (z % 2 == 0 && x % 2 != 0))
+                    {
+                        thisTexture = altTexture;
+                    }
+
                     var block = new MapBlock
                     {
                         Position = new Vector3(x, 0, z),
-                        FaceTextures = new[] { texture, 0, 0, 0, 0, 0 },
+                        FaceTextures = new[] { thisTexture, 0, 0, 0, 0, 0 },
                     };
 
                     if (x == 0 || x == length - 1)
                     {
-                        block.FaceTextures[2] = texture;
+                        block.FaceTextures[2] = thisTexture;
                     }
 
                     if (z == 0 || z == width - 1)
                     {
-                        block.FaceTextures[4] = texture;
+                        block.FaceTextures[4] = thisTexture;
                     }
 
                     blocks.Add(block);
@@ -62,7 +69,7 @@ namespace Mechs.Utility.Commands
                 WriteIndented = true,
             });
 
-            var contentDir = Path.Combine(AppContext.BaseDirectory, "Content");
+            var contentDir = Path.Combine(AppContext.BaseDirectory, "..\\..\\..\\...\\..\\..\\Mechs.Game\\Content");
             var mapJsonFilePath = Path.Combine(contentDir, fileName);
             using var outputFile = new StreamWriter(mapJsonFilePath);
             outputFile.Write(mapJson);

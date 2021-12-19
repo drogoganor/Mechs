@@ -9,6 +9,56 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Content\mapcity.json" />
+    <None Remove="Content\mapdemo.json" />
+    <None Remove="Content\mapdemo2.json" />
+    <None Remove="Content\textures.json" />
+    <None Remove="Content\textures\bricks1.png" />
+    <None Remove="Content\textures\grass.png" />
+    <None Remove="Content\textures\pavement1.png" />
+    <None Remove="Content\textures\placeholder-grey1.png" />
+    <None Remove="Content\textures\placeholder-grey2.png" />
+    <None Remove="Content\textures\placeholder-window1.png" />
+    <None Remove="Content\textures\road1.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Content\mapcity.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Content\mapdemo.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Content\mapdemo2.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Content\textures.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Content\textures\bricks1.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Content\textures\grass.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Content\textures\pavement1.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Content\textures\placeholder-grey1.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Content\textures\placeholder-grey2.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Content\textures\placeholder-window1.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Content\textures\road1.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Mechs\Mechs.csproj" />
   </ItemGroup>
 

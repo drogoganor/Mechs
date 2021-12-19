@@ -19,6 +19,14 @@
     {
       "ID": 5,
       "Filename": "textures\\grass.png"
+    },
+    {
+      "ID": 6,
+      "Filename": "textures\\road1.png"
+    },
+    {
+      "ID": 7,
+      "Filename": "textures\\pavement1.png"
     }
   ]
 }
