@@ -24,7 +24,7 @@
 
   <ItemGroup>
     <Content Include="Content\mapcity.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </Content>
     <Content Include="Content\mapdemo.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

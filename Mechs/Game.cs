@@ -139,7 +139,7 @@ namespace Mechs
             _ticks += deltaSeconds * 1000f;
             _cl.Begin();
 
-            var zoomFactor = 16f;
+            var zoomFactor = 48f;
             _cl.UpdateBuffer(_projectionBuffer, 0, Matrix4x4.CreateOrthographic(
                 zoomFactor,
                 Window.Width / Window.Height * zoomFactor,
