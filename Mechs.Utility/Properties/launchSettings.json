@@ -2,7 +2,7 @@
   "profiles": {
     "Mechs.Utility": {
       "commandName": "Project",
-      "commandLineArgs": "CreateCityMap 128 128 7 7"
+      "commandLineArgs": "CreateCityMap 256 256 7 7"
     }
   }
 }

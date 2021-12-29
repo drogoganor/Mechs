@@ -5,19 +5,90 @@ using System.Text.Json;
 
 namespace Mechs.Utility.Commands
 {
-    internal class RoadSegment
+    internal class RoadGrowth
     {
-        public Vector3 Start { get; set; }
-        public Vector3 End { get; set; }
+        public Vector2 Start { get; set; }
+        public Vector2 Size { get; set; }
+        public Vector2 Direction { get; set; }
 
-        public int Direction { get; set; }
+        public int Momentum { get; set; }
+        public int Facing { get; set; }
+        public float NoiseDirection { get; set; }
+    }
 
-        public bool Test(Vector3 point)
+    internal class RoadGrowthConfig
+    {
+        public int RoadWidth { get; set; }
+        public int Momentum { get; set; }
+        public int TurnCount { get; set; }
+        public int SpawnCount { get; set; }
+    }
+
+    internal class ZoneConsolidation
+    {
+        private HashSet<Vector2> zoneMembers = new HashSet<Vector2>();
+        private List<Vector2> frontier = new();
+        private readonly int _length;
+        private readonly int _width;
+        public int Count => zoneMembers.Count;
+
+        public ZoneConsolidation(int length, int width, Vector2 sample)
         {
-            if (point.X >= Start.X && point.X < End.X &&
-                point.Z >= Start.Z && point.Z < End.Z)
-                return true;
-            return false;
+            frontier.Add(sample);
+            _length = length;
+            _width = width;
+        }
+
+        public bool Contains(Vector2 pos)
+        {
+            return zoneMembers.Contains(pos);
+        }
+
+        public void Run(ref int[,] grid)
+        {
+            bool done;
+            do
+            {
+                done = Spread(ref grid);
+            } while (!done);
+        }
+
+        public bool Spread(ref int[,] grid)
+        {
+            var newFrontier = new List<Vector2>();
+            foreach (var pair in frontier)
+            {
+                int x = (int)pair.X;
+                int y = (int)pair.Y;
+
+                var top = new Vector2(x, y - 1);
+                var bottom = new Vector2(x, y + 1);
+                var left = new Vector2(x - 1, y);
+                var right = new Vector2(x + 1, y);
+
+                var sides = new[] { top, bottom, left, right };
+
+                foreach (var side in sides)
+                {
+                    if (side.X < 0 || side.X >= _length || side.Y < 0 || side.Y >= _width)
+                    {
+                        continue;
+                    }
+
+                    if (!zoneMembers.Contains(side) && grid[(int)side.X, (int)side.Y] == 0)
+                    {
+                        zoneMembers.Add(side);
+
+                        newFrontier.Add(side);
+                    }
+                }
+            }
+
+            frontier = newFrontier;
+
+            if (frontier.Count > 0)
+                return false;
+            return true;
         }
     }
 
@@ -32,8 +103,10 @@ namespace Mechs.Utility.Commands
         private readonly List<MapBlock> _blocks = new();
         private readonly Random _random = new();
 
-        private readonly List<RoadSegment> _roadSegments = new();
-        private readonly int[,] _grid;
+        private readonly Queue<RoadGrowth> roadGrowths = new();
+        private int[,] _grid;
+        private RoadGrowthConfig _growthConfig;
+        private readonly Queue<Vector2> zoneSamples = new();
 
         public void Execute(string[] args)
         {
@@ -50,8 +123,18 @@ namespace Mechs.Utility.Commands
 
             Console.WriteLine($"Writing map file: {_filename} ({_length}, {_height}, {_width}) with texture {_texture}.");
 
+            _grid = new int[_length, _width];
+
+            _growthConfig = new RoadGrowthConfig
+            {
+                Momentum = 8,
+                RoadWidth = 8,
+                SpawnCount = 1,
+            };
+
             //CreateGroundPlane();
             GenerateMainRoads();
+            RandomSampleZones();
             //DrawRoads();
             //WriteMap();
 
@@ -109,14 +192,53 @@ namespace Mechs.Utility.Commands
             Console.WriteLine($"Wrote map file: {mapJsonFilePath}.");
         }
 
+        private void RandomSampleZones()
+        {
+            int randomSampleCount = (int)((_length * _width) / _length);
+            var sampleList = new Queue<Vector2>();
+
+            do
+            {
+                var x = _random.Next(_length);
+                var y = _random.Next(_width);
+                var vec = new Vector2(x, y);
+
+                if (_grid[x, y] == 0 && !sampleList.Contains(vec))
+                {
+                    sampleList.Enqueue(vec);
+                }
+            } while (sampleList.Count < randomSampleCount);
+
+            var firstSample = sampleList.Dequeue();
+            var firstZone = new ZoneConsolidation(_length, _width, firstSample);
+            firstZone.Run(ref _grid);
+
+            var zones = new List<ZoneConsolidation>() { firstZone };
+
+            while (sampleList.Count > 0)
+            {
+                var sample = sampleList.Dequeue();
+                var belongsToZone = zones.FirstOrDefault(zone => zone.Contains(sample));
+                if (belongsToZone == null)
+                {
+                    var newZone = new ZoneConsolidation(_length, _width, sample);
+                    newZone.Run(ref _grid);
+                    zones.Add(newZone);
+                }
+            }
+
+            foreach (var zone in zones)
+            {
+                Console.WriteLine($"Zone: {zone.Count}");
+            }
+        }
+
         private void GenerateMainRoads()
         {
             const int minDistanceFromEdge = 5;
-            const int roadWidth = 4;
-            const int minimumRoadLength = 8;
 
             // Choose an edge to start
-            var startEdge = _random.Next(4);
+            var startEdge = 0; // _random.Next(4);
 
             var isEven = startEdge % 2 == 0;
 
@@ -127,99 +249,165 @@ namespace Mechs.Utility.Commands
 
             var startCoordB = _random.Next(width - 1 - (2 * minDistanceFromEdge)) + minDistanceFromEdge;
 
-            var randLength = _random.Next(length - minimumRoadLength) + minimumRoadLength;
+            var randLength = _random.Next(length - _growthConfig.Momentum) + _growthConfig.Momentum;
 
             Console.WriteLine($"Facing was {startEdge}");
 
             var startCoord = startEdge switch
             {
-                0 => new Vector3(startCoordA, 0, startCoordB),
-                1 => new Vector3(startCoordB, 0, startCoordA),
-                2 => new Vector3(startCoordA, 0, startCoordB),
-                3 => new Vector3(startCoordB, 0, startCoordA - randLength),
+                0 => new Vector2(startCoordA, startCoordB),
+                1 => new Vector2(startCoordB, startCoordA),
+                2 => new Vector2(startCoordA, startCoordB),
+                3 => new Vector2(startCoordB, startCoordA - randLength),
                 _ => throw new NotImplementedException(),
             };
 
-            var endCoord = startEdge switch
-            {
-                0 => startCoord + new Vector3(randLength, 0, roadWidth),
-                1 => startCoord + new Vector3(roadWidth, 0, randLength),
-                2 => new Vector3(startCoordA + randLength, 0, startCoordB + roadWidth),
-                3 => new Vector3(startCoordB + roadWidth, 0, startCoordA),
-                _ => throw new NotImplementedException(),
-            };
+            //var endCoord = startEdge switch
+            //{
+            //    0 => startCoord + new Vector3(randLength, 0, roadWidth),
+            //    1 => startCoord + new Vector3(roadWidth, 0, randLength),
+            //    2 => new Vector3(startCoordA + randLength, 0, startCoordB + roadWidth),
+            //    3 => new Vector3(startCoordB + roadWidth, 0, startCoordA),
+            //    _ => throw new NotImplementedException(),
+            //};
 
-            Console.WriteLine($"Start: {startCoord}   End: {endCoord}");
+            Console.WriteLine($"Start: {startCoord}");
 
-            var roadSegment = new RoadSegment
+            var roadSegment = new RoadGrowth
             {
-                Direction = startEdge,
+                Direction = GetDirectionFromFacing(startEdge),
                 Start = startCoord,
-                End = endCoord
+                Size = new Vector2(_growthConfig.RoadWidth, _growthConfig.RoadWidth),
+                Momentum = _growthConfig.Momentum,
+                Facing = startEdge,
+                NoiseDirection = (float)startEdge,
             };
 
-            _roadSegments.Add(roadSegment);
-            _roadSegments.Add(CreateMainRoadTurn(roadSegment, roadWidth));
+            roadGrowths.Enqueue(roadSegment);
+            GrowRoads();
         }
 
-        private RoadSegment CreateMainRoadTurn(RoadSegment lastSegment, int roadWidth)
+        private void GrowRoads()
         {
-            const int minimumRoadLength = 8;
-            var startEdge = 0;
-            var directionDoublesBack = true;
+            while (roadGrowths.Count > 0)
+            {
+                var road = roadGrowths.Dequeue();
+                while (GrowRoad(road))
+                {
+                    ;
+                }
+            }
+        }
+
+        private int GetRandomDirectionExcept(int[] except)
+        {
+            int startEdge;
             do
             {
-                directionDoublesBack = false;
                 startEdge = _random.Next(4);
-                var bothEven = lastSegment.Direction % 2 == 0 && startEdge % 2 == 0;
-                var bothOdd = lastSegment.Direction % 2 != 0 && startEdge % 2 != 0;
+            } while (except.Contains(startEdge));
 
-                if ((bothEven || bothOdd) && lastSegment.Direction != startEdge)
-                {
-                    directionDoublesBack = true;
-                }
-            } while (directionDoublesBack);
-
-            Console.WriteLine($"Facing was {startEdge}");
-
-            var isEven = startEdge % 2 == 0;
-
-            var length = isEven ? _length : _width;
-            var width = !isEven ? _length : _width;
-
-            var randLength = _random.Next(length - minimumRoadLength) + minimumRoadLength;
-
-            var startCoord = startEdge switch
-            {
-                0 => new Vector3(lastSegment.End.X, 0, lastSegment.End.Z),
-                1 => new Vector3(lastSegment.End.Z, 0, lastSegment.End.X),
-                2 => new Vector3(lastSegment.End.X, 0, lastSegment.End.Z),
-                3 => new Vector3(lastSegment.End.Z, 0, lastSegment.End.X - randLength),
-                _ => throw new NotImplementedException(),
-            };
-
-            var endCoord = startEdge switch
-            {
-
-                0 => startCoord + new Vector3(randLength, 0, roadWidth),
-                1 => startCoord + new Vector3(roadWidth, 0, randLength),
-                2 => new Vector3(startCoord.X + randLength, 0, startCoord.Z + roadWidth),
-                3 => new Vector3(startCoord.Z + roadWidth, 0, startCoord.X),
-                _ => throw new NotImplementedException(),
-            };
-
-            Console.WriteLine($"-Start: {startCoord}   End: {endCoord}");
-
-
-            var roadSegment = new RoadSegment
-            {
-                Direction = startEdge,
-                Start = startCoord,
-                End = endCoord
-            };
-
-            return roadSegment;
+            return startEdge;
         }
+
+        private bool GrowRoad(RoadGrowth growth)
+        {
+            // Grow
+            for (var i = 0; i < growth.Momentum; i++)
+            {
+                MarkRoadBlocks(growth);
+                growth.Start += growth.Direction;
+
+                if (growth.Start.X < -growth.Size.X || growth.Start.X > _length || growth.Start.Y < -growth.Size.Y || growth.Start.Y > _width)
+                {
+                    return false;
+                }
+            }
+
+            // Subtract momentum
+            growth.Momentum /= 2;
+            if (growth.Momentum <= 0)
+            {
+                growth.Momentum = 1;
+            }
+
+            // Do some random number generation
+            var swingRandom = (2f * (_random.NextSingle() - .5f)) / 1f;
+            growth.NoiseDirection += swingRandom / growth.Momentum;
+
+            var roadWidth = _growthConfig.RoadWidth;
+            Console.WriteLine($"NoiseDirection: {growth.NoiseDirection}");
+
+            var startEdge = WrapFacing((int)growth.NoiseDirection);
+
+            var reverseCurrentFacing = WrapFacing(growth.Facing + 2);
+            if (startEdge != growth.Facing)
+            {
+                // Increase momentum
+                growth.Momentum = _growthConfig.Momentum;
+                growth.Direction = GetDirectionFromFacing(startEdge);
+                growth.Facing = startEdge;
+
+                // Consider branching
+                var willBranch = (_random.NextSingle() * (1f / _growthConfig.SpawnCount)) > 0.25f;
+                if (willBranch)
+                {
+                    Console.WriteLine($"Get new direction except {growth.Facing}, {reverseCurrentFacing}");
+                    _growthConfig.SpawnCount++;
+                    var newBranchFacing = GetRandomDirectionExcept(new [] { growth.Facing, reverseCurrentFacing });
+                    Console.WriteLine($"Branched to facing {newBranchFacing}");
+
+                    var roadSegment = new RoadGrowth
+                    {
+                        Direction = GetDirectionFromFacing(newBranchFacing),
+                        Start = growth.Start,
+                        Size = new Vector2(roadWidth, roadWidth),
+                        Momentum = _growthConfig.Momentum,
+                        Facing = newBranchFacing,
+                        NoiseDirection = (float)newBranchFacing,
+                    };
+
+                    roadGrowths.Enqueue(roadSegment);
+                }
+            }
+
+            return true;
+        }
+
+        private Vector2 GetDirectionFromFacing(int facing)
+        {
+            var roadWidth = _growthConfig.RoadWidth;
+            return facing switch
+            {
+                0 => new Vector2(roadWidth, 0),
+                1 => new Vector2(0, roadWidth),
+                2 => new Vector2(-roadWidth, 0),
+                3 => new Vector2(0, -roadWidth),
+                _ => throw new NotImplementedException(),
+            };
+        }
+
+        private int WrapFacing(int facing)
+        {
+            return facing < 0 ? 4 + facing : facing % 4;
+        }
+
+        private void MarkRoadBlocks(RoadGrowth growth)
+        {
+            for (int x = (int)growth.Start.X; x < (int)(growth.Start.X + growth.Size.X); x++)
+            {
+                for (int y = (int)growth.Start.Y; y < (int)(growth.Start.Y + growth.Size.Y); y++)
+                {
+                    if (x < 0 || y < 0 || x >= _length || y >= _width)
+                    {
+                        continue;
+                    }
+
+                    _grid[x, y] = 1;
+                }
+            }
+        }
+
 
         private void DrawRoads()
         {
@@ -227,15 +415,15 @@ namespace Mechs.Utility.Commands
 
             foreach (var block in _blocks)
             {
-                foreach (var segment in _roadSegments)
-                {
-                    var isRoad = segment.Test(block.Position);
-                    if (isRoad)
-                    {
-                        block.FaceTextures[0] = roadTexture;
-                        break;
-                    }
-                }
+                //foreach (var segment in _roadSegments)
+                //{
+                //    var isRoad = segment.Test(block.Position);
+                //    if (isRoad)
+                //    {
+                //        block.FaceTextures[0] = roadTexture;
+                //        break;
+                //    }
+                //}
             }
         }
 
@@ -246,31 +434,10 @@ namespace Mechs.Utility.Commands
             {
                 for (var x = 0; x < _length; x++)
                 {
-                    var isRoad = false;
-                    int segmentIndex = 0;
-                    foreach (var segment in _roadSegments)
-                    {
-                        if (segment.Test(new Vector3(x, 0, z)))
-                        {
-                            isRoad = true;
-                            break;
-                        }
-                        else
-                        {
-                            segmentIndex++;
-                        }
-                    }
-
+                    var isRoad = _grid[x, z] != 0;
                     if (isRoad)
                     {
-                        if (segmentIndex == 0)
-                        {
-                            sb.Append("x");
-                        }
-                        else
-                        {
-                            sb.Append("y");
-                        }
+                        sb.Append("x");
                     }
                     else
                     {
