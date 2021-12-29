@@ -1,5 +1,6 @@
 ﻿using Mechs.Data;
 using System.Numerics;
+using System.Text;
 using System.Text.Json;
 
 namespace Mechs.Utility.Commands
@@ -8,6 +9,8 @@ namespace Mechs.Utility.Commands
     {
         public Vector3 Start { get; set; }
         public Vector3 End { get; set; }
+
+        public int Direction { get; set; }
 
         public bool Test(Vector3 point)
         {
@@ -30,6 +33,7 @@ namespace Mechs.Utility.Commands
         private readonly Random _random = new();
 
         private readonly List<RoadSegment> _roadSegments = new();
+        private readonly int[,] _grid;
 
         public void Execute(string[] args)
         {
@@ -46,10 +50,12 @@ namespace Mechs.Utility.Commands
 
             Console.WriteLine($"Writing map file: {_filename} ({_length}, {_height}, {_width}) with texture {_texture}.");
 
-            CreateGroundPlane();
+            //CreateGroundPlane();
             GenerateMainRoads();
-            DrawRoads();
-            WriteMap();
+            //DrawRoads();
+            //WriteMap();
+
+            DrawToTextFile();
         }
 
         private void CreateGroundPlane()
@@ -107,6 +113,7 @@ namespace Mechs.Utility.Commands
         {
             const int minDistanceFromEdge = 5;
             const int roadWidth = 4;
+            const int minimumRoadLength = 8;
 
             // Choose an edge to start
             var startEdge = _random.Next(4);
@@ -116,18 +123,20 @@ namespace Mechs.Utility.Commands
             var length = isEven ? _length : _width;
             var width = !isEven ? _length : _width;
 
-            var startCoordA = startEdge > 2 ? length - 1 : 0;
+            var startCoordA = startEdge > 2 ? length : 0;
 
             var startCoordB = _random.Next(width - 1 - (2 * minDistanceFromEdge)) + minDistanceFromEdge;
 
-            var randLength = _random.Next(length - 1);
+            var randLength = _random.Next(length - minimumRoadLength) + minimumRoadLength;
+
+            Console.WriteLine($"Facing was {startEdge}");
 
             var startCoord = startEdge switch
             {
                 0 => new Vector3(startCoordA, 0, startCoordB),
                 1 => new Vector3(startCoordB, 0, startCoordA),
                 2 => new Vector3(startCoordA, 0, startCoordB),
-                3 => new Vector3(startCoordB, 0, startCoordA),
+                3 => new Vector3(startCoordB, 0, startCoordA - randLength),
                 _ => throw new NotImplementedException(),
             };
 
@@ -135,18 +144,81 @@ namespace Mechs.Utility.Commands
             {
                 0 => startCoord + new Vector3(randLength, 0, roadWidth),
                 1 => startCoord + new Vector3(roadWidth, 0, randLength),
-                2 => startCoord - new Vector3(randLength, 0, -roadWidth),
-                3 => startCoord - new Vector3(-roadWidth, 0, randLength),
+                2 => new Vector3(startCoordA + randLength, 0, startCoordB + roadWidth),
+                3 => new Vector3(startCoordB + roadWidth, 0, startCoordA),
                 _ => throw new NotImplementedException(),
             };
 
+            Console.WriteLine($"Start: {startCoord}   End: {endCoord}");
+
             var roadSegment = new RoadSegment
             {
+                Direction = startEdge,
                 Start = startCoord,
                 End = endCoord
             };
 
             _roadSegments.Add(roadSegment);
+            _roadSegments.Add(CreateMainRoadTurn(roadSegment, roadWidth));
+        }
+
+        private RoadSegment CreateMainRoadTurn(RoadSegment lastSegment, int roadWidth)
+        {
+            const int minimumRoadLength = 8;
+            var startEdge = 0;
+            var directionDoublesBack = true;
+            do
+            {
+                directionDoublesBack = false;
+                startEdge = _random.Next(4);
+                var bothEven = lastSegment.Direction % 2 == 0 && startEdge % 2 == 0;
+                var bothOdd = lastSegment.Direction % 2 != 0 && startEdge % 2 != 0;
+
+                if ((bothEven || bothOdd) && lastSegment.Direction != startEdge)
+                {
+                    directionDoublesBack = true;
+                }
+            } while (directionDoublesBack);
+
+            Console.WriteLine($"Facing was {startEdge}");
+
+            var isEven = startEdge % 2 == 0;
+
+            var length = isEven ? _length : _width;
+            var width = !isEven ? _length : _width;
+
+            var randLength = _random.Next(length - minimumRoadLength) + minimumRoadLength;
+
+            var startCoord = startEdge switch
+            {
+                0 => new Vector3(lastSegment.End.X, 0, lastSegment.End.Z),
+                1 => new Vector3(lastSegment.End.Z, 0, lastSegment.End.X),
+                2 => new Vector3(lastSegment.End.X, 0, lastSegment.End.Z),
+                3 => new Vector3(lastSegment.End.Z, 0, lastSegment.End.X - randLength),
+                _ => throw new NotImplementedException(),
+            };
+
+            var endCoord = startEdge switch
+            {
+
+                0 => startCoord + new Vector3(randLength, 0, roadWidth),
+                1 => startCoord + new Vector3(roadWidth, 0, randLength),
+                2 => new Vector3(startCoord.X + randLength, 0, startCoord.Z + roadWidth),
+                3 => new Vector3(startCoord.Z + roadWidth, 0, startCoord.X),
+                _ => throw new NotImplementedException(),
+            };
+
+            Console.WriteLine($"-Start: {startCoord}   End: {endCoord}");
+
+
+            var roadSegment = new RoadSegment
+            {
+                Direction = startEdge,
+                Start = startCoord,
+                End = endCoord
+            };
+
+            return roadSegment;
         }
 
         private void DrawRoads()
@@ -165,6 +237,55 @@ namespace Mechs.Utility.Commands
                     }
                 }
             }
+        }
+
+        private void DrawToTextFile()
+        {
+            var sb = new StringBuilder();
+            for (var z = 0; z < _width; z++)
+            {
+                for (var x = 0; x < _length; x++)
+                {
+                    var isRoad = false;
+                    int segmentIndex = 0;
+                    foreach (var segment in _roadSegments)
+                    {
+                        if (segment.Test(new Vector3(x, 0, z)))
+                        {
+                            isRoad = true;
+                            break;
+                        }
+                        else
+                        {
+                            segmentIndex++;
+                        }
+                    }
+
+                    if (isRoad)
+                    {
+                        if (segmentIndex == 0)
+                        {
+                            sb.Append("x");
+                        }
+                        else
+                        {
+                            sb.Append("y");
+                        }
+                    }
+                    else
+                    {
+                        sb.Append("_");
+                    }
+                }
+
+                sb.AppendLine();
+            }
+
+
+            var contentDir = Path.Combine(AppContext.BaseDirectory, "..\\..\\..\\..\\");
+            var mapJsonFilePath = Path.Combine(contentDir, "road-test.txt");
+            using var outputFile = new StreamWriter(mapJsonFilePath);
+            outputFile.Write(sb.ToString());
         }
     }
 }
