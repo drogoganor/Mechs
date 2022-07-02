@@ -5,11 +5,18 @@ using System.Text.Json;
 
 namespace Mechs.Utility.Commands
 {
+    public class GrowthTracking
+    {
+        public Vector2[] Corners = new Vector2[4];
+    }
+
     internal class RoadGrowth
     {
         public Vector2 Start { get; set; }
         public Vector2 Size { get; set; }
         public Vector2 Direction { get; set; }
+
+        public List<GrowthTracking> Tracking { get; set; } = new List<GrowthTracking>();
 
         public int Momentum { get; set; }
         public int Facing { get; set; }
@@ -107,6 +114,7 @@ namespace Mechs.Utility.Commands
         private int[,] _grid;
         private RoadGrowthConfig _growthConfig;
         private readonly Queue<Vector2> zoneSamples = new();
+        private readonly List<RoadGrowth> mainRoads = new();
 
         public void Execute(string[] args)
         {
@@ -284,11 +292,12 @@ namespace Mechs.Utility.Commands
             };
 
             roadGrowths.Enqueue(roadSegment);
-            GrowRoads();
+            mainRoads.AddRange(GrowRoads());
         }
 
-        private void GrowRoads()
+        private List<RoadGrowth> GrowRoads()
         {
+            var roads = new List<RoadGrowth>();
             while (roadGrowths.Count > 0)
             {
                 var road = roadGrowths.Dequeue();
@@ -296,7 +305,11 @@ namespace Mechs.Utility.Commands
                 {
                     ;
                 }
+
+                roads.Add(road);
             }
+
+            return roads;
         }
 
         private int GetRandomDirectionExcept(int[] except)
@@ -315,6 +328,17 @@ namespace Mechs.Utility.Commands
             // Grow
             for (var i = 0; i < growth.Momentum; i++)
             {
+                // Debug markers
+                var topLeft = new Vector2(growth.Start.X - 1, growth.Start.Y - 1);
+                var topRight = new Vector2(growth.Start.X + growth.Size.X, growth.Start.Y - 1);
+                var bottomLeft = new Vector2(growth.Start.X - 1, growth.Start.Y + growth.Size.Y);
+                var bottomRight = new Vector2(growth.Start.X + growth.Size.X, growth.Start.Y + growth.Size.Y);
+                var growthTrack = new GrowthTracking
+                {
+                    Corners = new[] { topLeft, topRight, bottomLeft, bottomRight },
+                };
+                growth.Tracking.Add(growthTrack);
+
                 MarkRoadBlocks(growth);
                 growth.Start += growth.Direction;
 
@@ -406,6 +430,22 @@ namespace Mechs.Utility.Commands
                     _grid[x, y] = 1;
                 }
             }
+
+            // Mark road growths
+            foreach (var growthTrack in growth.Tracking)
+            {
+                foreach (var coord in growthTrack.Corners)
+                {
+                    var x = (int)coord.X;
+                    var y = (int)coord.Y;
+                    if (x < 0 || y < 0 || x >= _length || y >= _width)
+                    {
+                        continue;
+                    }
+
+                    _grid[x, y] = 2;
+                }
+            }
         }
 
 
@@ -434,15 +474,16 @@ namespace Mechs.Utility.Commands
             {
                 for (var x = 0; x < _length; x++)
                 {
-                    var isRoad = _grid[x, z] != 0;
-                    if (isRoad)
+                    var gridVal = _grid[x, z];
+                    var tileChar = gridVal switch
                     {
-                        sb.Append("x");
-                    }
-                    else
-                    {
-                        sb.Append("_");
-                    }
+                        0 => "_",
+                        1 => "x",
+                        2 => "O",
+                        _ => "?"
+                    };
+                    
+                    sb.Append(tileChar);
                 }
 
                 sb.AppendLine();
@@ -453,6 +494,8 @@ namespace Mechs.Utility.Commands
             var mapJsonFilePath = Path.Combine(contentDir, "road-test.txt");
             using var outputFile = new StreamWriter(mapJsonFilePath);
             outputFile.Write(sb.ToString());
+
+            Console.WriteLine($"Wrote debug file: {mapJsonFilePath}");
         }
     }
 }
